@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div id="app">
+      <div id="list"></div>
+      <input type="button" value="添加" onclick="btnAdd()" />
+      <input type="button" value="删除" onclick="btnDel()" />
+    </div>
+    <script>
+      let vm = {
+        // data
+        list: [1, 2, 3, 4]
+      };
+      //用于管理watcher的Dep对象
+      let dep = function() {
+        this.list = [];
+        this.add = function(watcher) {
+          this.list.push(watcher);
+        };
+        this.notify = function(newValue) {
+          this.list.forEach(element => {
+            element(newValue);
+          });
+        };
+      };
+
+      // compile
+      function renderList() {
+        let listContainer = document.querySelector("#list");
+        let contentList = "";
+        vm.list.forEach(function(item) {
+          contentList = contentList + `<div><h3>${item}</h3></div>`;
+        });
+        listContainer.innerHTML = contentList;
+      }
+
+      let deps = new dep();
+      deps.add(renderList);
+
+      // core
+      function initMvvm(vm) {
+        Object.keys(vm).forEach(key => {
+          let value = vm[key];
+          if (Array.isArray(value)) {
+            observeArray(vm, key);
+          }
+        });
+      }
+      function observeArray(vm, key) {
+        let arrayMethod = bindWatcherToArray();
+        vm[key].__proto__ = arrayMethod;
+      }
+      function bindWatcherToArray() {
+        let arrayMethod = Object.create(Array.prototype);
+        [
+          "push",
+          "pop",
+          "shift",
+          "unshift",
+          "splice",
+          "sort",
+          "reverse"
+        ].forEach(method => {
+          Object.defineProperty(arrayMethod, method, {
+            value: function() {
+              let args = [...arguments];
+              Array.prototype[method].apply(this, args);
+              console.log(`method: ${method}`);
+              deps.notify();
+            }
+          });
+        });
+        return arrayMethod;
+      }
+      //页面引用的方法
+      function btnAdd() {
+        vm.list.push(Math.random());
+      }
+      function btnDel() {
+        vm.list.pop();
+      }
+      //初始化数据源
+      initMvvm(vm);
+      //初始化页面
+      deps.notify();
+    </script>
+  </body>
+</html>
